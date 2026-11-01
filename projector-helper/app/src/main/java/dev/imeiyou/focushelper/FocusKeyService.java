@@ -24,6 +24,7 @@ import android.widget.Toast;
  *   F1 （key 59）→ 亮度 +5（可按住连续调节）
  *   F2 （key 60）→ 亮度 −5（可按住连续调节）
  *   Alt+1 … Alt+5 → 亮度预设档位（见 Brightness.PRESETS）
+ *   Alt+6 … Alt+9 → MEMC 设为 关 / 低 / 中 / 高（与游戏模式互斥）
  *   （F5 不用：投影仪的 Generic.kl 里 key 63 没有映射）
  *
  * 这几个键的按下、重复、松开事件全部吞掉，不再传给前台应用。
@@ -101,7 +102,7 @@ public class FocusKeyService extends AccessibilityService {
         return keyCode == KeyEvent.KEYCODE_F7 || keyCode == KeyEvent.KEYCODE_F8;
     }
 
-    /** 亮度加减与预设档位。返回 true 表示已处理。 */
+    /** 亮度加减、亮度预设（Alt+1…5）、MEMC 档位（Alt+6…9）。返回 true 表示已处理。 */
     private boolean handleBrightness(KeyEvent event) {
         int keyCode = event.getKeyCode();
         boolean down = event.getAction() == KeyEvent.ACTION_DOWN;
@@ -118,13 +119,19 @@ public class FocusKeyService extends AccessibilityService {
             return true;
         }
 
-        if (keyCode >= KeyEvent.KEYCODE_1 && keyCode <= KeyEvent.KEYCODE_5) {
+        if (keyCode >= KeyEvent.KEYCODE_1 && keyCode <= KeyEvent.KEYCODE_9) {
             if (down && event.isAltPressed()) {
                 consumedDigits.add(keyCode);
                 if (event.getRepeatCount() == 0) {
-                    int value = Brightness.PRESETS[keyCode - KeyEvent.KEYCODE_1];
-                    Log.i(FocusTrigger.TAG, "brightness preset " + value + " deviceId=" + event.getDeviceId());
-                    Brightness.set(this, value);
+                    if (keyCode <= KeyEvent.KEYCODE_5) {
+                        int value = Brightness.PRESETS[keyCode - KeyEvent.KEYCODE_1];
+                        Log.i(FocusTrigger.TAG, "brightness preset " + value + " deviceId=" + event.getDeviceId());
+                        Brightness.set(this, value);
+                    } else {
+                        int level = keyCode - KeyEvent.KEYCODE_6;   // 6→0 关, 7→1, 8→2, 9→3
+                        Log.i(FocusTrigger.TAG, "memc level " + level + " deviceId=" + event.getDeviceId());
+                        PictureSwitches.setMemc(this, level);
+                    }
                 }
                 return true;
             }

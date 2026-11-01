@@ -13,6 +13,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
+import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -46,6 +47,7 @@ public class MainActivity extends Activity
 
     private HidRemote remote;
     private Dialog brightnessPanel;
+    private Dialog memcPanel;
 
     private TextView statusText;
     private TextView lastAction;
@@ -102,6 +104,9 @@ public class MainActivity extends Activity
         if (brightnessPanel != null) {
             brightnessPanel.dismiss();
         }
+        if (memcPanel != null) {
+            memcPanel.dismiss();
+        }
         remote.removeStatusListener(this);
         remote.setSentListener(null);
     }
@@ -122,7 +127,7 @@ public class MainActivity extends Activity
         bind(R.id.fnSize, RemoteKey.SCREEN_SIZE);
         bind(R.id.fnDisplace, RemoteKey.SCREEN_DISPLACE);
         bind(R.id.fnGame, RemoteKey.GAME_MODE);
-        bind(R.id.fnMemc, RemoteKey.MEMC);
+        findViewById(R.id.fnMemc).setOnClickListener(v -> showMemcPanel());
         findViewById(R.id.fnBrightness).setOnClickListener(v -> showBrightnessPanel());
 
         bind(R.id.tpBack, RemoteKey.BACK);
@@ -157,8 +162,41 @@ public class MainActivity extends Activity
             d.findViewById(R.id.brightnessClose).setOnClickListener(v -> d.dismiss());
             brightnessPanel = d;
         }
-        brightnessPanel.show();
-        Window w = brightnessPanel.getWindow();
+        showAtBottom(brightnessPanel);
+    }
+
+    /** MEMC 档位面板：关 / 低 / 中 / 高，选中后发送并收起。 */
+    private void showMemcPanel() {
+        if (memcPanel == null) {
+            Dialog d = new Dialog(this);
+            d.requestWindowFeature(Window.FEATURE_NO_TITLE);
+            d.setContentView(R.layout.dialog_memc);
+            d.setCanceledOnTouchOutside(true);
+
+            bindMemcLevel(d, R.id.memcOff, RemoteKey.MEMC_OFF);
+            bindMemcLevel(d, R.id.memc1, RemoteKey.MEMC_1);
+            bindMemcLevel(d, R.id.memc2, RemoteKey.MEMC_2);
+            bindMemcLevel(d, R.id.memc3, RemoteKey.MEMC_3);
+            d.findViewById(R.id.memcClose).setOnClickListener(v -> d.dismiss());
+            memcPanel = d;
+        }
+        showAtBottom(memcPanel);
+    }
+
+    private void bindMemcLevel(Dialog d, int viewId, RemoteKey key) {
+        View v = d.findViewById(viewId);
+        v.setContentDescription(key.label);
+        v.setOnClickListener(view -> {
+            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+            remote.tap(key);
+            d.dismiss();
+        });
+    }
+
+    /** 以底部浮动面板的样式显示对话框。 */
+    private static void showAtBottom(Dialog d) {
+        d.show();
+        Window w = d.getWindow();
         if (w != null) {
             w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);

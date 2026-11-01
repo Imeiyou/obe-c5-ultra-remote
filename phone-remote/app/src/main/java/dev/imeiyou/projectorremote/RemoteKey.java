@@ -38,7 +38,7 @@ public enum RemoteKey {
     DEEP_FOCUS("深度对焦", Page.KEYBOARD, 0x45, Mode.TAP),        // F12
     SMART_CORRECTION("自动梯形", Page.KEYBOARD, 0x43, Mode.TAP),  // F10（自动梯形 + 对焦）
     MANUAL_KEYSTONE("手动梯形", Page.KEYBOARD, 0x42, Mode.TAP),   // F9
-    MEMC("MEMC", Page.KEYBOARD, 0x41, Mode.TAP),                 // F8
+    MEMC("MEMC", Page.KEYBOARD, 0x41, Mode.TAP),                 // F8 开关（界面已改用下面的档位面板，保留兼容）
     GAME_MODE("游戏模式", Page.KEYBOARD, 0x40, Mode.TAP),         // F7
     SCREEN_SIZE("画面尺寸", Page.KEYBOARD, 0x3F, Mode.TAP),       // F6
     SCREEN_DISPLACE("画面位移", Page.KEYBOARD, 0x3D, Mode.TAP),   // F4（F5 在投影仪上没有映射）
@@ -51,7 +51,13 @@ public enum RemoteKey {
     BRIGHTNESS_50("50", Page.KEYBOARD, 0x1F, Mode.TAP, Mod.LEFT_ALT),
     BRIGHTNESS_70("70", Page.KEYBOARD, 0x20, Mode.TAP, Mod.LEFT_ALT),
     BRIGHTNESS_85("85", Page.KEYBOARD, 0x21, Mode.TAP, Mod.LEFT_ALT),
-    BRIGHTNESS_100("100", Page.KEYBOARD, 0x22, Mode.TAP, Mod.LEFT_ALT);
+    BRIGHTNESS_100("100", Page.KEYBOARD, 0x22, Mode.TAP, Mod.LEFT_ALT),
+
+    // MEMC 档位：Alt + 数字 6~9 → 关 / 低 / 中 / 高（对焦助手 PictureSwitches.setMemc）
+    MEMC_OFF("MEMC 关", Page.KEYBOARD, 0x23, Mode.TAP, Mod.LEFT_ALT),
+    MEMC_1("MEMC 低", Page.KEYBOARD, 0x24, Mode.TAP, Mod.LEFT_ALT),
+    MEMC_2("MEMC 中", Page.KEYBOARD, 0x25, Mode.TAP, Mod.LEFT_ALT),
+    MEMC_3("MEMC 高", Page.KEYBOARD, 0x26, Mode.TAP, Mod.LEFT_ALT);
 
     public enum Page { KEYBOARD, CONSUMER }
 

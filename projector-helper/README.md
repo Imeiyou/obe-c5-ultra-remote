@@ -13,16 +13,17 @@
 | F12 | 深度对焦（等同原装遥控器长按对焦键） | 启动 `FocusService`，参数 `from=remote_long_press` |
 | F10 | 自动梯形（自动梯形 + 对焦，等同设置菜单里的"智能校正"） | 绑定 `CommonApiService`，调用 `autoKeystone()` |
 | F9 | 打开手动梯形校正界面 | 启动 `ProjectorCallerService`，动作 `KEYSTONE_CORRECTION` |
-| F8 | MEMC 开关（与游戏模式互斥） | 读写内容提供者 `com.bkdisplay.system.provider` 的 `memc` |
+| F8 | MEMC 开关（与游戏模式互斥；手机端已改用 Alt+6…9 档位，F8 保留） | 读写内容提供者 `com.bkdisplay.system.provider` 的 `memc` |
 | F7 | 游戏模式开关（与 MEMC 互斥） | 读写同一内容提供者的 `game_mode` |
 | F6 | 打开画面尺寸界面 | 启动 `ProjectorCallerService`，动作 `SCREEN_SIZE` |
 | F4 | 打开画面位移界面 | 启动 `ProjectorCallerService`，动作 `SCREEN_DISPLACE` |
 | F1 / F2 | 光源亮度 +5 / −5（按住每 150ms 调一次） | 读写内容提供者的 `back_light_progress`，范围限制为 10–100 |
 | Alt+1 … Alt+5 | 亮度设为 30 / 50 / 70 / 85 / 100 | 同上 |
+| Alt+6 … Alt+9 | MEMC 设为 关 / 低 / 中 / 高（开启时关闭游戏模式） | 读写内容提供者的 `memc` |
 
 - F5 不使用：投影仪的 `Generic.kl` 里 key 63 没有映射。
 - 游戏模式与 MEMC 的互斥顺序与系统菜单一致：开游戏模式前先把 MEMC 设为 0；开 MEMC 前先关 PC 模式和游戏模式。
-- 开游戏模式时会记下当时的 MEMC 档位，关游戏模式时恢复；开 MEMC 时使用上次记下的档位，从没记过时用 1（低）。
+- 开游戏模式时会记下当时的 MEMC 档位，关游戏模式时恢复；用 F8 开 MEMC 时使用上次记下的档位，从没记过时用 1（低）。
 - 亮度最低限制为 10，防止误操作导致黑屏。
 
 ## 编译
@@ -37,12 +38,22 @@
 不同固件的按键映射可能不同，先确认：
 
 ```bat
-adb shell "grep -nE '^key (59|60|62|64|65|66|67|68|88) ' /system/usr/keylayout/Generic.kl"
+adb shell "grep -nE '^key (2|3|4|5|6|7|8|9|10|56|59|60|62|64|65|66|67|68|88) ' /system/usr/keylayout/Generic.kl"
 ```
 
 应该输出：
 
 ```
+key 2     1
+key 3     2
+key 4     3
+key 5     4
+key 6     5
+key 7     6
+key 8     7
+key 9     8
+key 10    9
+key 56    ALT_LEFT
 key 59    F1
 key 60    F2
 key 62    F4
@@ -125,6 +136,8 @@ adb shell pm grant dev.imeiyou.focushelper android.permission.WRITE_SECURE_SETTI
 
 - 授权重启后仍然有效；卸载后失效，覆盖安装不失效。
 - 检查时机：开机完成时、开机后 30 秒和 2 分钟；服务运行期间清单一旦被改掉，1 秒后加回；应用被覆盖安装后；测试界面上的"立即修复无障碍服务"按钮。
+- 清单里有但服务没有运行时（开机后的两次定时检查和"立即修复"按钮），会先把自己从清单移除再加回，让系统重新启动服务。
+- 原理、做不到的情况和检查命令见 [常见问题](../README.md#guard)。
 - 恢复时**保留清单里原有的其他服务**，只把对焦助手追加回去。
 
 这个权限只用于改写无障碍服务清单这一项设置。如果你不想授权，也可以不做这一步，但开机后功能键可能失效，需要手动重新执行第 3 步。
@@ -134,7 +147,7 @@ adb shell pm grant dev.imeiyou.focushelper android.permission.WRITE_SECURE_SETTI
 | 显示 | 含义 |
 |---|---|
 | 运行中 | 服务已被系统绑定，按键截获有效 |
-| 设置里已开启，但服务没有运行 | 清单里有，但系统没有绑定；点"立即修复"或重启 |
+| 设置里已开启，但服务没有运行 | 清单里有，但系统没有启动服务；点"立即修复"（会移除再加回），或重启 |
 | 未开启 | 清单里没有 |
 
 **停用对焦助手：** 先撤销授权，否则它会自己恢复：
@@ -184,5 +197,5 @@ adb shell "logcat -d | grep -iE 'FocusHelper|Unhandled key'"
 - 功能键只在**第一次按下**时触发（亮度加减除外）；按住产生的重复事件和松开事件都会被吞掉，不传给前台应用。
 - 防重复触发：深度对焦 3 秒、自动梯形 5 秒、其他功能 1 秒内的重复按键会被忽略。
 - 其他所有按键一律放行。
-- 截获不区分来源：投影仪上接了实体键盘的话，它的这些 F 键和 Alt+1…5 也会被对焦助手接管。
+- 截获不区分来源：投影仪上接了实体键盘的话，它的这些 F 键和 Alt+1…9 也会被对焦助手接管。
 - 不要手动启动系统里的 `GyroscopeService`：在 C5 Ultra 上它会导致自动梯形异常，需要完全关机再开机才能恢复。

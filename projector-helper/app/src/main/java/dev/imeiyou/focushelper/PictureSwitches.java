@@ -107,6 +107,42 @@ public final class PictureSwitches {
         }, "memc").start();
     }
 
+    private static final String[] MEMC_NAMES = {"关", "低", "中", "高"};
+
+    /**
+     * 直接设置 MEMC 档位：0 = 关，1/2/3 = 低/中/高。
+     * 开启任一档位时按官方顺序先关 PC 模式和游戏模式。在后台线程执行，结果用提示框显示。
+     */
+    public static void setMemc(Context context, int level) {
+        final Context app = context.getApplicationContext();
+        final int target = Math.max(0, Math.min(3, level));
+        new Thread(() -> {
+            try {
+                ContentResolver cr = app.getContentResolver();
+                int memc = readInt(cr, KEY_MEMC);
+                if (target == 0) {
+                    if (memc > 0) {
+                        saveMemc(app, memc);
+                    }
+                    write(cr, KEY_MEMC, 0);
+                    toast(app, "MEMC：关");
+                } else {
+                    boolean gameOn = readInt(cr, KEY_GAME) == 1;
+                    write(cr, KEY_PC, Boolean.FALSE);
+                    write(cr, KEY_GAME, Boolean.FALSE);
+                    write(cr, KEY_MEMC, target);
+                    saveMemc(app, target);
+                    toast(app, "MEMC：" + MEMC_NAMES[target] + "（" + target + " 档）"
+                            + (gameOn ? "，游戏模式已关" : ""));
+                }
+                Log.i(TAG, "setMemc " + target + " done, was memc=" + memc);
+            } catch (Exception e) {
+                Log.e(TAG, "setMemc failed", e);
+                toast(app, "MEMC 设置失败：" + e.getClass().getSimpleName());
+            }
+        }, "memc-set").start();
+    }
+
     private static int readInt(ContentResolver cr, String key) {
         try (Cursor c = cr.query(URI, new String[] {key}, null, null, null)) {
             if (c == null || !c.moveToFirst()) {
