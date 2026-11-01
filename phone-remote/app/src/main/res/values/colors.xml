@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#FF101418</color>
+    <color name="surface">#FF1C2228</color>
+    <color name="surface_high">#FF252D35</color>
+    <color name="surface_pressed">#FF33404C</color>
+    <color name="stroke">#FF2E3740</color>
+
+    <color name="text_primary">#FFECEFF1</color>
+    <color name="text_secondary">#FF8D9BA6</color>
+
+    <color name="accent">#FFFF9F43</color>
+    <color name="accent_dim">#33FF9F43</color>
+    <color name="on_accent">#FF1A1206</color>
+
+    <color name="power">#FFE5534B</color>
+    <color name="power_bg">#FF2A1A1A</color>
+
+    <color name="ripple">#33FFFFFF</color>
+
+    <color name="status_on">#FF4CAF50</color>
+    <color name="status_off">#FF6B7782</color>
+</resources>

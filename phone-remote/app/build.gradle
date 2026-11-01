@@ -1,0 +1,30 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'dev.imeiyou.projectorremote'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'dev.imeiyou.projectorremote'
+        // BluetoothHidDevice 需要 Android 9+；这里按 Android 12 以后的蓝牙权限模型写，所以最低 12
+        minSdk 31
+        targetSdk 34
+        versionCode 1
+        versionName '0.1'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+// 不依赖任何第三方库

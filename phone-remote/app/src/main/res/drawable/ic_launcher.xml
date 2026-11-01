@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 简单图标：深色圆角底，橙色方向键圆环 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="#FF101418"
+        android:pathData="M10,0h28a10,10 0,0 1,10 10v28a10,10 0,0 1,-10 10h-28a10,10 0,0 1,-10 -10v-28a10,10 0,0 1,10 -10z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFF9F43"
+        android:strokeWidth="4"
+        android:pathData="M24,10a14,14 0,1 1,0 28a14,14 0,1 1,0 -28z" />
+    <path
+        android:fillColor="#FFFF9F43"
+        android:pathData="M24,19a5,5 0,1 1,0 10a5,5 0,1 1,0 -10z" />
+</vector>

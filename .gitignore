@@ -1,0 +1,22 @@
+# Gradle / Android Studio
+.gradle/
+build/
+.idea/
+*.iml
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# 签名文件：绝对不要提交
+*.jks
+*.keystore
+keystore.properties
+
+# 编译产物（发布请用 GitHub Releases）
+*.apk
+*.aab
+
+# 系统文件
+.DS_Store
+Thumbs.db

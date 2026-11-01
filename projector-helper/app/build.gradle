@@ -1,0 +1,30 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'dev.imeiyou.focushelper'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'dev.imeiyou.focushelper'
+        // 投影仪是 Android 9
+        minSdk 28
+        targetSdk 34
+        versionCode 1
+        versionName '0.1'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+// 不依赖任何第三方库

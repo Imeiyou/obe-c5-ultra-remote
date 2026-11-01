@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">大眼橙C5 Ultra蓝牙遥控器</string>
+    <!-- 桌面图标下显示的短名称 -->
+    <string name="launcher_name">C5 Ultra 遥控</string>
+
+    <string name="status_demo">未连接</string>
+    <string name="connect">连接</string>
+    <string name="tab_keys">按键</string>
+    <string name="tab_touchpad">触控板</string>
+    <string name="section_projector">投影功能</string>
+
+    <string name="touchpad_hint_1">单指滑动：移动光标</string>
+    <string name="touchpad_hint_2">轻点：点击　·　双指上下滑动：滚动</string>
+</resources>
