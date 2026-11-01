@@ -25,7 +25,7 @@
 
 | 项目 | 已测试 |
 |---|---|
-| 投影仪 | 大眼橙 C5 Ultra，Android 9，固件版本：`待填写` |
+| 投影仪 | 大眼橙 C5 Ultra，Android 9，固件版本：1.0.38 |
 | 手机 | Android 12 及以上，需要系统支持蓝牙 HID Device |
 
 其他大眼橙型号可能部分可用，但按键映射和系统接口都可能不同，**需要实机测试**。如果你在其他型号或固件上试过，欢迎在 Issue 里反馈结果。
@@ -45,8 +45,10 @@
 | 亮度 | 底部面板：±5 调节（可按住）和 30/50/70/85/100 预设 | 是 |
 
 ## 快速开始
-
+<img width="1920" height="1080" alt="projector_screen" src="https://github.com/user-attachments/assets/cd061031-c6ce-4858-9b86-6cd468024c36" />
 1. **投影仪端**：按 [projector-helper/README.md](projector-helper/README.md) 安装、确认按键映射、开启无障碍服务并授权自动恢复。
+
+<img width="1080" height="2227" alt="phone_shot" src="https://github.com/user-attachments/assets/75d25eaa-513f-48a2-af98-404a6283c7db" />
 2. **手机端**：安装后按 [phone-remote/README.md](phone-remote/README.md) 配对。
 
 > **最常见的问题：按键错乱。** 投影仪会缓存每台蓝牙设备的 HID 描述符。如果手机以前和投影仪配对过（无论用的是什么应用），必须**两边都删除配对**后重新配对，否则会出现主页变成鼠标左键、静音变成返回之类的问题。
