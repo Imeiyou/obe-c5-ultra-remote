@@ -10,7 +10,7 @@
 
 | 目录 | 装在哪里 | 作用 |
 |---|---|---|
-| [`phone-remote`](phone-remote/) | 手机（Android 12+） | 以蓝牙键盘 + 鼠标身份连接投影仪，提供遥控界面和触控板 |
+| [`phone-remote`](phone-remote/) | 手机（Android 12+） | 以蓝牙键盘 + 鼠标身份连接投影仪，提供遥控界面和触控板；通过网络 ADB 在后台恢复被系统停止的对焦助手 |
 | [`projector-helper`](projector-helper/) | 投影仪 | 无障碍服务，截获手机发来的 F1–F12 功能键，调用对应的投影仪功能 |
 
 只装手机端也能用基础按键（方向、确认、返回、主页、菜单、设置、音量、静音、电源、触控板）；投影功能需要两端都装。
@@ -19,6 +19,8 @@
 手机 ──蓝牙 HID（键盘/消费者/鼠标）──▶ 投影仪
                                        ├─ 基础按键：系统直接处理
                                        └─ F 功能键：对焦助手截获 → 调用系统功能
+手机 ──WiFi，网络 ADB（可选）─────────▶ 投影仪
+                                       └─ 对焦助手被系统停止时，在后台把它恢复
 ```
 
 ## 兼容性
@@ -53,6 +55,7 @@
 <img width="270" height="557" alt="phone_shot" src="https://github.com/user-attachments/assets/c6b6bf2e-8daf-46f3-9dfd-62a1b3b4b7a7" />
 
 2. **手机端**：安装后按 [phone-remote/README.md](phone-remote/README.md) 配对。
+3. **建议：开启对焦助手自动恢复。** 投影仪系统会在切换应用时停止对焦助手，手机可以通过网络 ADB 在后台把它恢复。设置方法见 [phone-remote/README.md](phone-remote/README.md#guard)。
 
 > **最常见的问题：按键错乱。** 投影仪会缓存每台蓝牙设备的 HID 描述符。如果手机以前和投影仪配对过（无论用的是什么应用），必须**两边都删除配对**后重新配对，否则会出现主页变成鼠标左键、静音变成返回之类的问题。
 
@@ -65,29 +68,39 @@ adb connect <投影仪IP>:5555
 ```
 
 <a id="guard"></a>
-### 1. 投影功能键没反应 / 重启后失效
+### 1. 投影功能键没反应 / 用一会儿后失效
 
-授权自动恢复（只需一次）：
+**原因：投影仪系统会主动停止对焦助手。** 这台投影仪的系统（厂商修改过的系统框架）在切换前台应用时，例如切到 HDMI、回到桌面，会从正在运行的第三方应用里挑一个强行停止。日志里能看到：
 
-```bat
-adb shell pm grant dev.imeiyou.focushelper android.permission.WRITE_SECURE_SETTINGS
+```
+ActivityManagerP: kp for rsm:com.mediatek.wwtv.tvcenter
+ActivityManagerP: 10023is not sys and isn't vb:dev.imeiyou.focushelper
+ActivityManager: Force stopping dev.imeiyou.focushelper appid=10023 user=0: from pid <system_server>
 ```
 
-然后在投影仪上打开对焦助手，点"立即修复无障碍服务"，顶部显示"运行中"即可。
+Android 9 强行停止一个应用时，会同时把它的无障碍服务从清单里删掉、清除它的定时检查，并把它标记为"已停止"。被标记的应用收不到开机广播和其他广播，**自己无法恢复**，直到有人启动它一次。这个清理逻辑在系统框架里，不 root 无法关闭或加白名单。
 
-检查状态：
+**解决：让手机自动恢复（推荐）。** 在手机遥控器里设置投影仪 IP 并授权一次，之后手机会在蓝牙连上时、以及按投影功能键之前检查对焦助手；被停止了就通过网络 ADB 把它加回无障碍服务清单，系统在后台重新启动它，不打开任何界面。设置方法见 [phone-remote/README.md](phone-remote/README.md#guard)。
+
+**手机不在 WiFi 下时的临时办法：** 在投影仪上打开"对焦助手"测试界面，打开时会自动修复一次。
+
+检查当前状态：
 
 ```bat
 adb shell settings get secure enabled_accessibility_services
-adb shell settings get secure accessibility_enabled
-adb shell "dumpsys package dev.imeiyou.focushelper | grep WRITE_SECURE_SETTINGS"
+adb shell "dumpsys activity services dev.imeiyou.focushelper | head -5"
+adb shell "dumpsys package dev.imeiyou.focushelper | grep -E 'WRITE_SECURE_SETTINGS|stopped='"
 ```
 
 - 第 1 条输出应包含 `dev.imeiyou.focushelper/dev.imeiyou.focushelper.FocusKeyService`
-- 第 2 条应为 `1`
-- 第 3 条应有 `granted=true`
+- 第 2 条应有 `ServiceRecord{… dev.imeiyou.focushelper/.FocusKeyService}`；只有 `(nothing)` 说明没在运行
+- 第 3 条应有 `granted=true`，并且 `stopped=false`；`stopped=true` 就是被强行停止过
 
-在系统设置里强行停止过对焦助手的，需要手动打开一次对焦助手。
+确认是不是被系统停止的（在失效后、恢复之前执行）：
+
+```bat
+adb shell "logcat -b all -d | grep -E 'ActivityManagerP|Force stopping dev.imeiyou'"
+```
 
 停用对焦助手（先撤销授权，再卸载）：
 
@@ -140,7 +153,7 @@ adb shell settings delete global bluetooth_a2dp_src_priority_AA:BB:CC:DD:EE:FF
 | 注册失败 / 未注册：可能有其他蓝牙键盘/鼠标应用正在占用 | 强行停止其他蓝牙键盘/鼠标/遥控类应用，关闭再打开手机蓝牙 |
 | 连接请求失败 | 确认投影仪已开机；没配对过的按第 3 节配对 |
 | 无法使用蓝牙 HID 功能 | 手机系统不支持，无法解决 |
-连接经常自己断开 | 把遥控应用的电池设置改为"不限制" |
+| 连接经常自己断开 | 把遥控应用的电池设置改为"不限制" |
 
 <a id="input"></a>
 ### 5. 自动梯形突然失效
@@ -172,10 +185,12 @@ An unofficial Bluetooth remote for the **OBE (大眼橙) C5 Ultra** projector (A
 - **`phone-remote`** (Android 12+ phone): acts as a Bluetooth HID keyboard + consumer control + mouse via `BluetoothHidDevice`. Replicates the stock remote (D-pad, OK, Back, Home, Menu, Settings, volume, mute, power with short/long press) and adds a touchpad.
 - **`projector-helper`** (projector): an accessibility service that intercepts F-keys sent by the phone and triggers built-in projector functions — deep focus, auto keystone, manual keystone, screen size, screen shift, game mode / MEMC (mutually exclusive), and light-source brightness.
 
+The projector's vendor framework force-stops a third-party app whenever the foreground app changes (e.g. switching to HDMI), which disables the helper. The phone app can optionally revive it in the background over network ADB (same Wi-Fi, port 5555, one-time authorization on the projector); no UI is opened on the projector.
+
 Basic keys work with the phone app alone; projector functions need both apps.
 
 **Important:** the projector caches each Bluetooth device's HID descriptor. If your phone was ever paired with the projector before, unpair on **both** sides and pair again, otherwise keys will be misinterpreted.
 
-The projector-side calls rely on non-public services in the vendor's settings app and may break after a firmware update. Only tested on the C5 Ultra. Not affiliated with OBE. Licensed under GPL-3.0.Licensed under GPL-3.0. Versions up to v0.1.0 were released under MIT.
+The projector-side calls rely on non-public services in the vendor's settings app and may break after a firmware update. Only tested on the C5 Ultra. Not affiliated with OBE. Licensed under GPL-3.0. Versions up to v0.1.0 were released under MIT.
 
 Documentation is in Chinese; see each subfolder's README for details.

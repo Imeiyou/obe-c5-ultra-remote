@@ -92,4 +92,34 @@ public enum RemoteKey {
         this.mode = mode;
         this.modifiers = modifiers;
     }
+
+    /**
+     * 这个键是否要靠投影仪上的"对焦助手"截获才有效果。
+     * 是的话，发送前会先确认对焦助手在运行（见 ProjectorGuard）。
+     */
+    public boolean needsHelper() {
+        switch (this) {
+            case DEEP_FOCUS:
+            case SMART_CORRECTION:
+            case MANUAL_KEYSTONE:
+            case MEMC:
+            case GAME_MODE:
+            case SCREEN_SIZE:
+            case SCREEN_DISPLACE:
+            case BRIGHTNESS_UP:
+            case BRIGHTNESS_DOWN:
+            case BRIGHTNESS_30:
+            case BRIGHTNESS_50:
+            case BRIGHTNESS_70:
+            case BRIGHTNESS_85:
+            case BRIGHTNESS_100:
+            case MEMC_OFF:
+            case MEMC_1:
+            case MEMC_2:
+            case MEMC_3:
+                return true;
+            default:
+                return false;
+        }
+    }
 }

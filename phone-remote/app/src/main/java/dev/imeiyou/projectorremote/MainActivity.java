@@ -12,6 +12,7 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.text.InputType;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
@@ -20,7 +21,9 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -37,7 +40,7 @@ import java.util.List;
  * 连接由 RemoteService 在后台保持，关闭界面不会断开；要断开请点"断开"或通知栏里的"断开"。
  */
 public class MainActivity extends Activity
-        implements RemoteSender.Listener, HidRemote.StatusListener {
+        implements RemoteSender.Listener, HidRemote.StatusListener, ProjectorGuard.Listener {
 
     private static final int REQ_CONNECT = 1;
     private static final int REQ_ADVERTISE = 2;
@@ -49,6 +52,7 @@ public class MainActivity extends Activity
     private int pendingAction;
 
     private HidRemote remote;
+    private ProjectorGuard guard;
     private Dialog brightnessPanel;
     private Dialog memcPanel;
 
@@ -67,6 +71,7 @@ public class MainActivity extends Activity
         setContentView(R.layout.activity_main);
 
         remote = HidRemote.get(this);
+        guard = ProjectorGuard.get(this);
 
         statusText = findViewById(R.id.statusText);
         lastAction = findViewById(R.id.lastAction);
@@ -97,6 +102,7 @@ public class MainActivity extends Activity
 
         remote.addStatusListener(this);
         remote.setSentListener(this);
+        guard.addListener(this);
 
         // 已经选过投影仪、并且有权限时，打开应用就自动连接
         if (!remote.isStarted() && remote.hasTarget()
@@ -118,6 +124,7 @@ public class MainActivity extends Activity
         }
         remote.removeStatusListener(this);
         remote.setSentListener(null);
+        guard.removeListener(this);
     }
 
     private void bindKeys() {
@@ -313,11 +320,77 @@ public class MainActivity extends Activity
         dryRun.setOnCheckedChangeListener((v, checked) -> KeyBinder.powerDryRun = checked);
         box.addView(dryRun);
 
+        EditText hostInput = addGuardSection(box, pad);
+
+        // 内容较多，放进可滚动容器
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(box);
+
         new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setTitle("调试")
-                .setView(box)
-                .setPositiveButton("完成", null)
+                .setView(scroll)
+                .setPositiveButton("完成", (d, w) -> guard.setHost(hostInput.getText().toString()))
                 .show();
+    }
+
+    /**
+     * 调试面板里的"对焦助手自动恢复"设置：投影仪 IP、授权、立即检查、是否自动检查。
+     * 返回 IP 输入框，关闭面板时保存。
+     */
+    private EditText addGuardSection(LinearLayout box, int pad) {
+        TextView title = new TextView(this);
+        title.setText("对焦助手自动恢复（网络 ADB）");
+        title.setTextSize(15);
+        title.setPadding(0, pad, 0, pad / 4);
+        box.addView(title);
+
+        TextView help = new TextView(this);
+        help.setTextSize(12);
+        help.setText("投影仪系统会在切换应用时停止对焦助手。填好投影仪的 IP 并授权后，"
+                + "手机会在需要时通过网络 ADB 在后台把它恢复，不打开任何界面。\n"
+                + "手机和投影仪要在同一个 WiFi；建议在路由器里给投影仪固定 IP。");
+        box.addView(help);
+
+        EditText host = new EditText(this);
+        host.setSingleLine(true);
+        host.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        host.setHint("投影仪 IP，例如 192.168.1.100");
+        host.setText(guard.host());
+        box.addView(host);
+
+        TextView status = new TextView(this);
+        status.setTextSize(13);
+        status.setPadding(0, pad / 4, 0, pad / 4);
+        status.setText("状态：" + guard.lastMessage());
+
+        Button authorize = new Button(this);
+        authorize.setAllCaps(false);
+        authorize.setText("保存 IP 并授权（首次使用）");
+        authorize.setOnClickListener(v -> {
+            guard.setHost(host.getText().toString());
+            status.setText("正在连接…");
+            guard.authorize(status::setText, msg -> status.setText(msg));
+        });
+        box.addView(authorize);
+
+        Button check = new Button(this);
+        check.setAllCaps(false);
+        check.setText("立即检查并恢复");
+        check.setOnClickListener(v -> {
+            guard.setHost(host.getText().toString());
+            status.setText("正在检查…");
+            guard.checkNow(msg -> status.setText(msg));
+        });
+        box.addView(check);
+
+        CheckBox auto = new CheckBox(this);
+        auto.setText("按投影功能键前自动检查并恢复");
+        auto.setChecked(guard.autoEnabled());
+        auto.setOnCheckedChangeListener((v, checked) -> guard.setAutoEnabled(checked));
+        box.addView(auto);
+
+        box.addView(status);
+        return host;
     }
 
     private void showDevicePicker() {
@@ -421,6 +494,11 @@ public class MainActivity extends Activity
     @Override
     public void onSent(String description) {
         lastAction.setText(description);
+    }
+
+    @Override
+    public void onGuardMessage(String message) {
+        lastAction.setText(message);
     }
 
     /**

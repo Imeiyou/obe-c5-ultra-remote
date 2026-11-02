@@ -11,8 +11,8 @@ android {
         // BluetoothHidDevice 需要 Android 9+；这里按 Android 12 以后的蓝牙权限模型写，所以最低 12
         minSdk 31
         targetSdk 34
-        versionCode 1
-        versionName '0.1'
+        versionCode 3
+        versionName '0.3.0'
     }
 
     buildTypes {

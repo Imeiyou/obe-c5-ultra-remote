@@ -354,6 +354,8 @@ public class HidRemote implements RemoteSender {
                     // 投影仪主动连上来时（例如刚配对完），也记住它
                     prefs.edit().putString(PREF_TARGET, device.getAddress()).apply();
                     setState(State.CONNECTED, nameOf(device));
+                    // 投影仪刚开机或刚连上：在后台确认一次对焦助手在运行
+                    ProjectorGuard.get(context).checkAsync();
                     break;
                 case BluetoothProfile.STATE_CONNECTING:
                     setState(State.CONNECTING, "正在连接 " + nameOf(device) + "…");
@@ -434,7 +436,10 @@ public class HidRemote implements RemoteSender {
 
     @Override
     public void keyDown(RemoteKey key) {
-        worker.post(() -> press(key));
+        worker.post(() -> {
+            guardIfNeeded(key);
+            press(key);
+        });
         notifySent("按下 " + key.label);
     }
 
@@ -445,9 +450,23 @@ public class HidRemote implements RemoteSender {
 
     @Override
     public void tap(RemoteKey key) {
-        worker.post(() -> press(key));
-        worker.postDelayed(() -> release(key), TAP_GAP_MS);
+        worker.post(() -> {
+            guardIfNeeded(key);
+            press(key);
+            // 松开要排在按下之后：检查可能耗时，所以在这里才安排松开
+            worker.postDelayed(() -> release(key), TAP_GAP_MS);
+        });
         notifySent(key.label);
+    }
+
+    /**
+     * 需要对焦助手的按键，发送前先确认它在运行（被系统停止时会在后台复活，耗时 1～2 秒）。
+     * 在发送线程里执行：检查期间后面的按键排队等待，顺序不会乱。
+     */
+    private void guardIfNeeded(RemoteKey key) {
+        if (key.needsHelper() && isConnected()) {
+            ProjectorGuard.get(context).ensureBeforeKey();
+        }
     }
 
     @Override

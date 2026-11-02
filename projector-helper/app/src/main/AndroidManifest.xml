@@ -8,6 +8,11 @@
         android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- 只用于接收"蓝牙设备已连接"广播（第二条恢复触发途径）。
+         投影仪是 Android 9，这是普通权限，安装即授予，不会弹窗 -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
 
     <uses-feature
         android:name="android.software.leanback"
@@ -32,13 +37,34 @@
             </intent-filter>
         </activity>
 
-        <!-- 开机、应用更新、定时检查时恢复无障碍服务 -->
+        <!-- 没有界面的"修复对焦助手"：点一下即修复，并解除"已停止"状态 -->
+        <activity
+            android:name=".RepairActivity"
+            android:exported="true"
+            android:label="@string/repair_label"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="dev.imeiyou.focushelper.repair"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- 开机、蓝牙设备连上、应用更新、定时检查时恢复无障碍服务 -->
         <receiver
             android:name=".GuardReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
             </intent-filter>
         </receiver>
 

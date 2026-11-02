@@ -2,5 +2,6 @@
 <resources>
     <string name="app_name">对焦助手</string>
     <string name="a11y_label">对焦助手（F12 深度对焦）</string>
+    <string name="repair_label">修复对焦助手</string>
     <string name="a11y_desc">截获蓝牙设备发来的 F12 键，触发投影仪的深度对焦。不读取任何界面内容。</string>
 </resources>

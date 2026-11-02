@@ -55,8 +55,9 @@ public class FocusKeyService extends AccessibilityService {
         public void onChange(boolean selfChange) {
             if (!AccessibilityGuard.isListed(FocusKeyService.this)) {
                 Log.w(FocusTrigger.TAG, "accessibility list changed, focushelper removed");
+                GuardLog.add(FocusKeyService.this, "运行中发现清单被改写，对焦助手被移除");
                 handler.postDelayed(() ->
-                        AccessibilityGuard.ensureEnabled(FocusKeyService.this, "observer"), 1000);
+                        AccessibilityGuard.ensureEnabled(FocusKeyService.this, "清单监视", false), 1000);
             }
         }
     };
@@ -69,14 +70,17 @@ public class FocusKeyService extends AccessibilityService {
                 Settings.Secure.getUriFor(Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES),
                 false, listObserver);
         Log.i(FocusTrigger.TAG, "accessibility service connected");
+        GuardLog.add(this, "无障碍服务已连接（开始截获按键）");
     }
 
     @Override
     public boolean onUnbind(Intent intent) {
         running = false;
-        // 被系统解绑时（例如清单被改写），进程可能很快被回收：交给定时检查来恢复
+        // 被系统解绑时（例如清单被改写），进程可能很快被回收：交给定时检查来恢复。
+        // 注意：如果是被"强行停止"，进程被直接杀掉，这里不会执行，闹钟也会被系统清除。
         AccessibilityGuard.scheduleCheck(this, 3000, 3);
         Log.i(FocusTrigger.TAG, "accessibility service unbound");
+        GuardLog.add(this, "无障碍服务被系统解绑");
         return super.onUnbind(intent);
     }
 

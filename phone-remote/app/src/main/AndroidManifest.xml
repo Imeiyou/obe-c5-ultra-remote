@@ -9,6 +9,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 通过网络 ADB 在后台恢复投影仪上的对焦助手（普通权限，安装时自动授予） -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- 电源长按时的震动提示（普通权限，安装时自动授予） -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
