@@ -156,7 +156,9 @@ adb shell settings delete global bluetooth_a2dp_src_priority_AA:BB:CC:DD:EE:FF
 
 ## 许可证
 
-[MIT](LICENSE)
+Copyright (C) 2026 Imeiyou
+
+本项目以 [GPL-3.0](LICENSE) 发布：可以自由使用、修改和分发，包括商业用途；但发布修改版或包含本项目代码的软件时，必须以 GPL-3.0 公开全部源代码，并保留原作者署名。
 
 ---
 
@@ -173,6 +175,6 @@ Basic keys work with the phone app alone; projector functions need both apps.
 
 **Important:** the projector caches each Bluetooth device's HID descriptor. If your phone was ever paired with the projector before, unpair on **both** sides and pair again, otherwise keys will be misinterpreted.
 
-The projector-side calls rely on non-public services in the vendor's settings app and may break after a firmware update. Only tested on the C5 Ultra. Not affiliated with OBE. Licensed under MIT.
+The projector-side calls rely on non-public services in the vendor's settings app and may break after a firmware update. Only tested on the C5 Ultra. Not affiliated with OBE. Licensed under GPL-3.0.
 
 Documentation is in Chinese; see each subfolder's README for details.
