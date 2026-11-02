@@ -180,6 +180,9 @@ adb shell settings put global bluetooth_a2dp_src_priority_<手机蓝牙地址> 0
 
 - **震动方式：** 不同手机对应用震动的限制不同。逐个点"试：…"，哪个能震就停在哪个，电源键会改用这种方式（会记住）。
 - **电源测试模式：** 勾选后，电源按满 3 秒只显示"测试：关机"，不真正关机，方便测试分段。不保存，重新打开应用后自动关闭。
+
+<img width="270" height="264" alt="net_adb" src="https://github.com/user-attachments/assets/249cc2f3-1e30-4993-aacc-e90df4778e4d" />
+
 - **对焦助手自动恢复：** 投影仪 IP、首次授权、立即检查、自动检查开关，见[上文](#guard)。
 
 ## 已知限制
