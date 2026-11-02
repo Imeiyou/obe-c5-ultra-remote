@@ -35,7 +35,7 @@
 | 按键 | 说明 | 需要对焦助手 |
 |---|---|---|
 | 方向键 / 确认 / 返回 / 主页 / 菜单 / 设置 | 与原装遥控器一致 | 否 |
-| 电源 | 短按弹出关机菜单，长按直接关机（与原装遥控器一致） | 否 |
+| 电源 | 短按弹出关机菜单；按住 1～3 秒松手取消；按满 3 秒直接关机 | 否 |
 | 音量 + / − / 静音 | 连接后手机侧边音量键也会控制投影仪音量 | 否 |
 | 触控板 | 单指移动光标、轻点点击、双指滚动 | 否 |
 | 深度对焦 | 等同原装遥控器长按对焦键 | 是 |
@@ -159,7 +159,7 @@ adb shell settings delete global bluetooth_a2dp_src_priority_AA:BB:CC:DD:EE:FF
 Copyright (C) 2026 Imeiyou
 
 本项目以 [GPL-3.0](LICENSE) 发布：可以自由使用、修改和分发，包括商业用途；但发布修改版或包含本项目代码的软件时，必须以 GPL-3.0 公开全部源代码，并保留原作者署名。
-
+ v0.1.0 及之前的版本以 MIT 许可证发布。
 ---
 
 <a id="english"></a>
@@ -175,6 +175,6 @@ Basic keys work with the phone app alone; projector functions need both apps.
 
 **Important:** the projector caches each Bluetooth device's HID descriptor. If your phone was ever paired with the projector before, unpair on **both** sides and pair again, otherwise keys will be misinterpreted.
 
-The projector-side calls rely on non-public services in the vendor's settings app and may break after a firmware update. Only tested on the C5 Ultra. Not affiliated with OBE. Licensed under GPL-3.0.
+The projector-side calls rely on non-public services in the vendor's settings app and may break after a firmware update. Only tested on the C5 Ultra. Not affiliated with OBE. Licensed under GPL-3.0.Licensed under GPL-3.0. Versions up to v0.1.0 were released under MIT.
 
 Documentation is in Chinese; see each subfolder's README for details.

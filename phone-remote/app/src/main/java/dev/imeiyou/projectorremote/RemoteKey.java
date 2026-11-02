@@ -11,6 +11,7 @@ package dev.imeiyou.projectorremote;
  *   HOLD          按下发"按下"，松开发"松开"；按住时由投影仪自己产生重复或判断长按（方向键、音量、电源）
  *   TAP           无论按多久，都只发一次"按下 + 松开"（避免设置菜单反复开关那类问题）
  *   LONG_CONFIRM  必须长按才发送一次，防止误触（目前没有按键使用）
+ *   POWER         由手机判断短按 / 长按，再向投影仪发送固定时长的按键（电源键使用）
  */
 public enum RemoteKey {
 
@@ -26,8 +27,8 @@ public enum RemoteKey {
 
     // 系统
     SETTINGS("设置", Page.KEYBOARD, 0x44, Mode.TAP),          // F11 → Generic.kl key 87 SETTINGS
-    // 按住方式发送，由投影仪自己根据按住时长区分：短按弹出关机菜单，长按直接关机（与原装遥控器一致）
-    POWER("电源", Page.KEYBOARD, 0x66, Mode.HOLD),
+    // 短按 / 长按由手机判断（见 KeyBinder 的 POWER 模式）：短按弹出关机菜单，长按直接关机
+    POWER("电源", Page.KEYBOARD, 0x66, Mode.POWER),
 
     // 声音
     VOLUME_UP("音量 +", Page.KEYBOARD, 0x80, Mode.HOLD),
@@ -61,7 +62,7 @@ public enum RemoteKey {
 
     public enum Page { KEYBOARD, CONSUMER }
 
-    public enum Mode { HOLD, TAP, LONG_CONFIRM }
+    public enum Mode { HOLD, TAP, LONG_CONFIRM, POWER }
 
     /**
      * 键盘报告第一个字节里的修饰键位。

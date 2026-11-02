@@ -18,6 +18,9 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -83,6 +86,12 @@ public class MainActivity extends Activity
         connectButton.setOnClickListener(v -> onConnectClicked());
         connectButton.setOnLongClickListener(v -> {
             withConnectPermission(NEXT_PICK);
+            return true;
+        });
+
+        // 隐藏的调试面板：长按顶部的连接状态文字
+        statusText.setOnLongClickListener(v -> {
+            showDebugPanel();
             return true;
         });
 
@@ -261,6 +270,54 @@ public class MainActivity extends Activity
         } else if (next == NEXT_CONNECT) {
             RemoteService.start(this);
         }
+    }
+
+    /**
+     * 调试面板：逐个试震动方式（点哪个就试哪个，并设为电源键使用的方式），
+     * 以及电源测试模式（第三段不真正关机）。
+     */
+    private void showDebugPanel() {
+        int pad = Math.round(20 * getResources().getDisplayMetrics().density);
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(pad, pad / 2, pad, 0);
+
+        TextView info = new TextView(this);
+        info.setText(Haptics.diagnose(this));
+        info.setTextSize(13);
+        box.addView(info);
+
+        TextView current = new TextView(this);
+        current.setTextSize(14);
+        current.setPadding(0, pad / 2, 0, pad / 4);
+        current.setText("电源键使用：" + Haptics.NAMES[Haptics.method(this)]);
+        box.addView(current);
+
+        for (int i = 0; i < Haptics.NAMES.length; i++) {
+            final int method = i;
+            Button b = new Button(this);
+            b.setAllCaps(false);
+            b.setText("试：" + Haptics.NAMES[i]);
+            b.setOnClickListener(v -> {
+                boolean ok = Haptics.play(v, method, 300);
+                Haptics.setMethod(this, method);
+                current.setText("电源键使用：" + Haptics.NAMES[method]
+                        + (ok ? "" : "（调用失败）"));
+            });
+            box.addView(b);
+        }
+
+        CheckBox dryRun = new CheckBox(this);
+        dryRun.setText("电源测试模式：按满 3 秒只提示，不真正关机");
+        dryRun.setChecked(KeyBinder.powerDryRun);
+        dryRun.setOnCheckedChangeListener((v, checked) -> KeyBinder.powerDryRun = checked);
+        box.addView(dryRun);
+
+        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle("调试")
+                .setView(box)
+                .setPositiveButton("完成", null)
+                .show();
     }
 
     private void showDevicePicker() {

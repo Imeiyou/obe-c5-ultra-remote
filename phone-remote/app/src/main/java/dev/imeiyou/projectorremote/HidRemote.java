@@ -12,6 +12,7 @@ import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 
 import java.util.LinkedHashMap;
@@ -42,6 +43,28 @@ public class HidRemote implements RemoteSender {
 
     // 单击类按键：按下与松开之间的间隔
     private static final long TAP_GAP_MS = 40;
+
+    /**
+     * 唤醒链路后等多久再发真正的按键。
+     * 蓝牙空闲一段时间后会进入省电状态，此时紧接着发出的"按下"和"松开"可能被合并成一次
+     * 几乎没有时长的按键，投影仪可能忽略它。先补发一次当前键盘状态（不改变任何按键）把链路叫醒。
+     */
+    private static final long WAKE_LEAD_MS = 100;
+
+    /**
+     * 鼠标移动报告的间隔：触摸移动先累计，再按这个间隔均匀发送。
+     * 20ms = 每秒 50 个报告。光标仍不连贯可以试 25～30；觉得跟手慢可以试 16。
+     */
+    private static final long MOUSE_INTERVAL_MS = 20;
+
+    /** 距上次发送鼠标报告超过这个时间，wakeLink 才真正发送唤醒报告 */
+    private static final long WAKE_IDLE_MS = 150;
+
+    /**
+     * 平滑系数：每次只发送累计量的这个比例，剩下的留到下一次，把突发的大位移摊开。
+     * 1.0 = 不平滑（有多少发多少）；越小越平滑，但停手后光标会多滑一小段。建议 0.5～1.0。
+     */
+    private static final float MOUSE_SMOOTHING = 0.6f;
 
     public enum State { OFF, STARTING, READY, CONNECTING, CONNECTED, ERROR }
 
@@ -225,6 +248,7 @@ public class HidRemote implements RemoteSender {
         registered = false;
         started = false;
         worker.post(() -> {
+            resetMotion();
             pressedKeys.clear();
             consumerUsage = 0;
             mouseButtons = 0;
@@ -338,6 +362,7 @@ public class HidRemote implements RemoteSender {
                     if (host == null || host.equals(device)) {
                         host = null;
                         worker.post(() -> {
+                            resetMotion();
                             pressedKeys.clear();
                             consumerUsage = 0;
                             mouseButtons = 0;
@@ -426,13 +451,114 @@ public class HidRemote implements RemoteSender {
     }
 
     @Override
+    public void tapHeld(RemoteKey key, long holdMs) {
+        worker.post(this::sendKeyboard);
+        worker.postDelayed(() -> press(key), WAKE_LEAD_MS);
+        worker.postDelayed(() -> release(key), WAKE_LEAD_MS + holdMs);
+        notifySent(key.label + "（短按）");
+    }
+
+    @Override
+    public void pressWithWake(RemoteKey key) {
+        worker.post(this::sendKeyboard);
+        worker.postDelayed(() -> press(key), WAKE_LEAD_MS);
+        notifySent(key.label + "（长按）");
+    }
+
+    @Override
+    public void keyUpAfter(RemoteKey key, long delayMs) {
+        worker.postDelayed(() -> release(key), Math.max(0, delayMs));
+    }
+
+    // ---- 鼠标移动合并（只在 worker 线程里访问） ----
+    private int pendingDx, pendingDy;
+    private boolean motionScheduled;
+    private long lastMotionAt;
+
+    private final Runnable flushMotion = new Runnable() {
+        @Override
+        public void run() {
+            motionScheduled = false;
+            if (pendingDx == 0 && pendingDy == 0) {
+                return;
+            }
+            int sx = smoothPart(pendingDx);
+            int sy = smoothPart(pendingDy);
+            pendingDx -= sx;
+            pendingDy -= sy;
+            sendMouse(sx, sy, 0);
+            lastMotionAt = SystemClock.uptimeMillis();
+            if (pendingDx != 0 || pendingDy != 0) {
+                motionScheduled = true;
+                worker.postDelayed(this, MOUSE_INTERVAL_MS);
+            }
+        }
+    };
+
+    /** 立刻发出所有未发送的移动量（点击、滚动之前调用，保证点在正确的位置）。 */
+    private void flushMotionNow() {
+        worker.removeCallbacks(flushMotion);
+        motionScheduled = false;
+        while (pendingDx != 0 || pendingDy != 0) {
+            int sx = clamp127(pendingDx);
+            int sy = clamp127(pendingDy);
+            pendingDx -= sx;
+            pendingDy -= sy;
+            sendMouse(sx, sy, 0);
+        }
+        lastMotionAt = SystemClock.uptimeMillis();
+    }
+
+    /** 丢弃未发送的移动量（断开、停止时调用，只在 worker 线程里调用）。 */
+    private void resetMotion() {
+        worker.removeCallbacks(flushMotion);
+        motionScheduled = false;
+        pendingDx = pendingDy = 0;
+    }
+
+    /** 本次要发送的量：累计量乘以平滑系数，至少 1 个计数，最多 ±127。 */
+    private static int smoothPart(int pending) {
+        if (pending == 0) {
+            return 0;
+        }
+        int part = Math.round(pending * MOUSE_SMOOTHING);
+        if (part == 0) {
+            part = pending > 0 ? 1 : -1;
+        }
+        return clamp127(part);
+    }
+
+    private static int clamp127(int v) {
+        return Math.max(-127, Math.min(127, v));
+    }
+
+    @Override
+    public void wakeLink() {
+        worker.post(() -> {
+            // 有移动正在发送时链路本来就是醒着的，不用再发
+            if (!motionScheduled && SystemClock.uptimeMillis() - lastMotionAt > WAKE_IDLE_MS) {
+                sendMouse(0, 0, 0);
+            }
+        });
+    }
+
+    @Override
     public void mouseMove(int dx, int dy) {
-        worker.post(() -> sendMouse(dx, dy, 0));
+        worker.post(() -> {
+            pendingDx += dx;
+            pendingDy += dy;
+            if (!motionScheduled) {
+                motionScheduled = true;
+                long wait = lastMotionAt + MOUSE_INTERVAL_MS - SystemClock.uptimeMillis();
+                worker.postDelayed(flushMotion, Math.max(0, wait));
+            }
+        });
     }
 
     @Override
     public void mouseClick() {
         worker.post(() -> {
+            flushMotionNow();
             mouseButtons = 1;
             sendMouse(0, 0, 0);
         });
@@ -445,7 +571,10 @@ public class HidRemote implements RemoteSender {
 
     @Override
     public void mouseScroll(int notches) {
-        worker.post(() -> sendMouse(0, 0, notches));
+        worker.post(() -> {
+            flushMotionNow();
+            sendMouse(0, 0, notches);
+        });
     }
 
     private void press(RemoteKey key) {
@@ -479,6 +608,7 @@ public class HidRemote implements RemoteSender {
     /** 断开前把所有按键松开，避免投影仪那边残留"按住"状态。 */
     private void releaseAll() {
         worker.post(() -> {
+            resetMotion();
             pressedKeys.clear();
             consumerUsage = 0;
             mouseButtons = 0;

@@ -20,10 +20,14 @@ import android.view.ViewConfiguration;
  */
 public class TouchpadView extends View {
 
-    // 光标速度：基础倍率与加速度
-    private static final float BASE_GAIN = 1.1f;
-    private static final float ACCEL = 0.04f;
-    private static final float MAX_GAIN = 3.5f;
+    // 光标速度：手指每移动 1dp，光标移动多少个计数。
+    // 按手指速度（dp/毫秒）加速：慢移精细，快划走得远。与手机屏幕刷新率无关。
+    private static final float BASE_GAIN = 0.9f;   // 慢速时的倍率
+    private static final float ACCEL = 1.2f;       // 每 1 dp/ms 的速度增加多少倍率
+    private static final float MAX_GAIN = 3.0f;
+
+    // 手指放在触控板上期间，每隔多久唤醒一次蓝牙链路（防止手指停住不动时链路又进入省电状态）
+    private static final long KEEP_AWAKE_MS = 400;
 
     // 轻点判定
     private static final long TAP_MAX_MS = 220;
@@ -43,6 +47,7 @@ public class TouchpadView extends View {
     private RemoteSender sender;
 
     private float lastX, lastY;
+    private long lastMoveTime;
     private float downX, downY;
     private long downTime;
     private boolean moved;
@@ -51,6 +56,16 @@ public class TouchpadView extends View {
     private float scrollAcc;
     private float lastScrollY;
     private boolean touching;
+
+    private final Runnable keepAwake = new Runnable() {
+        @Override
+        public void run() {
+            if (touching && sender != null) {
+                sender.wakeLink();
+                postDelayed(this, KEEP_AWAKE_MS);
+            }
+        }
+    };
 
     private String hint1 = "";
     private String hint2 = "";
@@ -107,9 +122,15 @@ public class TouchpadView extends View {
         switch (e.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 getParent().requestDisallowInterceptTouchEvent(true);
+                // 手指一碰到就先唤醒蓝牙链路：手指移动超过防抖距离之前，链路已经醒了，
+                // 光标开始移动时不再卡一下
+                removeCallbacks(keepAwake);
+                touching = true;
+                keepAwake.run();
                 lastX = downX = e.getX();
                 lastY = downY = e.getY();
                 downTime = e.getEventTime();
+                lastMoveTime = downTime;
                 moved = false;
                 multiTouch = false;
                 remX = remY = 0;
@@ -147,11 +168,13 @@ public class TouchpadView extends View {
                     }
                 }
                 touching = false;
+                removeCallbacks(keepAwake);
                 invalidate();
                 return true;
 
             case MotionEvent.ACTION_CANCEL:
                 touching = false;
+                removeCallbacks(keepAwake);
                 invalidate();
                 return true;
 
@@ -166,32 +189,31 @@ public class TouchpadView extends View {
         if (!moved && Math.hypot(x - downX, y - downY) > touchSlop) {
             moved = true;
         }
-        float dx = x - lastX;
-        float dy = y - lastY;
+        float density = getResources().getDisplayMetrics().density;
+        float dx = (x - lastX) / density;   // 换算成 dp
+        float dy = (y - lastY) / density;
+        long t = e.getEventTime();
+        long dt = Math.max(1, t - lastMoveTime);
         lastX = x;
         lastY = y;
+        lastMoveTime = t;
         invalidate();
         if (!moved) {
             return;
         }
 
-        // 简单加速：手指每次移动的距离越大，倍率越高
-        float dist = (float) Math.hypot(dx, dy);
-        float gain = Math.min(MAX_GAIN, BASE_GAIN + ACCEL * dist);
-        float fx = dx * gain / getResources().getDisplayMetrics().density * 2f + remX;
-        float fy = dy * gain / getResources().getDisplayMetrics().density * 2f + remY;
+        float speed = (float) Math.hypot(dx, dy) / dt;   // dp/ms
+        float gain = Math.min(MAX_GAIN, BASE_GAIN + ACCEL * speed);
+        float fx = dx * gain + remX;
+        float fy = dy * gain + remY;
         int ix = (int) fx;
         int iy = (int) fy;
         remX = fx - ix;
         remY = fy - iy;
 
-        // HID 鼠标报告每次最多 ±127，超出的分多次发送
-        while ((ix != 0 || iy != 0) && sender != null) {
-            int sx = clamp(ix);
-            int sy = clamp(iy);
-            sender.mouseMove(sx, sy);
-            ix -= sx;
-            iy -= sy;
+        // 只累计移动量；由 HidRemote 按固定间隔合并发送（单次超过 ±127 时会自动拆分）
+        if ((ix != 0 || iy != 0) && sender != null) {
+            sender.mouseMove(ix, iy);
         }
     }
 
@@ -217,10 +239,6 @@ public class TouchpadView extends View {
             sum += e.getY(i);
         }
         return sum / n;
-    }
-
-    private static int clamp(int v) {
-        return Math.max(-127, Math.min(127, v));
     }
 
     private float dp(float v) {
