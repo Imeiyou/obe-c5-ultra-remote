@@ -115,6 +115,8 @@ adb shell settings put global bluetooth_a2dp_src_priority_<手机蓝牙地址> 0
 
 长按顶部的连接状态文字，打开调试面板：
 
+<img width="270" height="464" alt="power-vibrate" src="https://github.com/user-attachments/assets/f4896bae-7521-40a3-b524-8b9abe8cf9d1" />
+
 - **震动方式：** 不同手机对应用震动的限制不同。逐个点"试：…"，哪个能震就停在哪个，电源键会改用这种方式（会记住）。
 - **电源测试模式：** 勾选后，电源按满 3 秒只显示"测试：关机"，不真正关机，方便测试分段。不保存，重新打开应用后自动关闭。
 
